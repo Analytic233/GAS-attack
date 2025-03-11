@@ -18,8 +18,9 @@ int main()
     int a = 10;
     int b = 64;
     vector<uint8_t> key = {
-        0x8b, 0x0b, 0xac, 0x2a, 0xcc, 0x71, 0x7b, 0xb4, 0x66, 0xea, 0xab, 0xed, 0x78, 0xe2, 0xfb,
-        0xdb, 0x3a, 0xd9, 0x89, 0x60, 0xde, 0xbd, 0xc5, 0x53, 0x2b, 0x67, 0xec, 0x5a, 0xa6, 0x65, 0x54, 0x6f};
+        0x28, 0x33, 0xbe, 0xad, 0x04, 0x9d, 0xd7, 0xb6, 0x34, 0xcf, 0x88, 0x9c, 0x16, 0x5e,
+        0x95, 0x57, 0xeb, 0xe3, 0xe8, 0x2d, 0x2a, 0xeb, 0x1f, 0x72, 0xf2, 0x29, 0xc7, 0x8b,
+        0x26, 0x5b, 0x99, 0xaf};
 
     PRNG prng(key, 256, 74);
     string key_bitstring = bytesToBitstring(key);
@@ -28,8 +29,7 @@ int main()
 
     while (true)
     {
-        // vector<int> t_indices = {87, 110, 86, 139, 205, 127, 30, 196, 6, 55, 202};
-        vector<int> t_indices = selectRandomIndices(11);
+        vector<int> t_indices = selectRandomIndices(12);
 
         int success_count = 0;
         vector<pair<int, vector<int>>> correct_instances;
@@ -37,7 +37,7 @@ int main()
         int num_instances = 257;
 
         // 处理文件
-        processFilesWithMemoryMapping("data", t_indices, "filtered_output.txt", 125); // 假设读取 125 个文件
+        processFilesWithMemoryMapping("data", t_indices, "filtered_output.txt", 500); // 假设读取 500 个文件
 
         ifstream file("filtered_output.txt");
         if (!file.is_open())
@@ -97,12 +97,12 @@ int main()
         int num = 0;
         cout << "Number of instances in correct_instances: " << correct_instances.size() << endl;
 
-        while (num < 200000)
+        while (num < 309904)
         {
             // 生成矩阵和结果向量
             auto [matrix, results_bits] = generateMatrixFromInstances(all_instances, t_indices, 256);
 
-            vector<vector<int>> solutions = gaussianEliminationMod2WithFreeVariables(matrix, results_bits, 245, 245);
+            vector<vector<int>> solutions = gaussianEliminationMod2WithFreeVariables(matrix, results_bits, 244, 244);
 
             // 验证解的正确性，将所有有效解保存下来
             vector<vector<int>> valid_solutions = verifySolutions(matrix, results_bits, solutions);
@@ -134,7 +134,7 @@ int main()
         }
 
         num_1++;
-        cout << "tried " << num_1 << " 个group" << endl;
+        cout << "tried " << num_1 << " groups" << endl;
     }
 
     clock_t end_time = clock();
