@@ -12,6 +12,7 @@ These features will be added in the future.
 ## Key Information
 The key used in this implementation is derived from hashing the value **"CRYPTO2025 "** using the standard **SHA-256** function.
 
+
 ## Usage Instructions
 To run the program, you need to generate outputs first and then perform the attack. Here are the commands to do both steps in sequence:
 
