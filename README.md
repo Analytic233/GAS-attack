@@ -10,17 +10,17 @@ We recommend starting with the verification scripts, as they are fast and direct
 
 These scripts are designed to run quickly on a standard laptop and provide immediate insight into the attack's mechanics.
 
-#### A. Statistical Verification Script (`Filp_verify.cpp`)
+#### A. Statistical Verification Script (`FiLIP_verify.cpp`)
 
 This script validates the theoretical probabilities presented in our paper. It uses a "fakely done by hand" approach, to analyze the statistical behavior of different groups without performing a full search.
 
 **Compile and Run:**
 ```sh
 # Compile with optimizations for fast execution
-g++ -std=c++17 -O3 Filp_verify.cpp -o filp_verifier
+g++ -std=c++17 -O3 FiLIP_verify.cpp -o FiLIP_verifier
 
 # Run the verification
-./filp_verifier
+./FiLIP_verifier
 ```
 
 #### B. Self-Contained Toy Example (`toy.cpp`)

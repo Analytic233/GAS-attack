@@ -343,7 +343,7 @@ void processSingleFileWithMemoryMapping(const std::string &inputFilePath, const 
         offset += 32;
 
         int weight = hammingWeight(maj_vector, t_indices_vector);
-        if (weight == 51) {
+        if (weight == 52) {
             writeResultToFile(outFile, result_bit, xor_vector, maj_vector);
         }
     }
