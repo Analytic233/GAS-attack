@@ -110,7 +110,7 @@ int main() {
         for(int k=LEN_A; k<LOC_N; ++k) if(in_L[s.indices[k]] && (bad_key[s.indices[k]]^s.noise[k])==1) valid_bad++;
         if(valid_bad >= FIX_R) {
             bad_total++;
-            int lhs=0; for(int k=0; k<LEN_A; ++k) lhs^=(good_key[s.indices[k]]^s.noise[k]);
+            int lhs=0; for(int k=0; k<LEN_A; ++k) lhs^=(bad_key[s.indices[k]]^s.noise[k]);
             if((s.y^lhs)==1) bad_matches++;
         }
     }

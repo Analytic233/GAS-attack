@@ -1,17 +1,58 @@
-#include "verify.h"
-#include "PRNG.h"
+﻿#include "verify.h"
+#include "prng.h"
 #include <algorithm>
 #include <bitset>
 #include <chrono>
-#include <random>
-#include <stdexcept>
 #include <fstream>
+#include <numeric>
+#include <random>
 #include <sstream>
+#include <stdexcept>
+#include <ctime>
+#if defined(_MSC_VER)
+#include <intrin.h>
+#endif
 #include <windows.h>
 
 std::mt19937 generator(static_cast<unsigned int>(std::time(0)));
 
-// 将字节转换为比特串
+namespace {
+int trailingZeroCount(unsigned int x) {
+#if defined(_MSC_VER)
+    unsigned long index = 0;
+    _BitScanForward(&index, x);
+    return static_cast<int>(index);
+#else
+    return __builtin_ctz(x);
+#endif
+}
+
+int popcountByte(uint8_t x) {
+#if defined(_MSC_VER)
+    return __popcnt(static_cast<unsigned int>(x));
+#else
+    return __builtin_popcount(x);
+#endif
+}
+
+int evaluateOutputFromKey(const std::vector<uint8_t> &key_bytes, const std::vector<int> &permuted_indices, int a, int b) {
+    std::vector<int> register_bits;
+    register_bits.reserve(permuted_indices.size());
+
+    for (int idx : permuted_indices) {
+        const int byte_idx = idx / 8;
+        const int bit_idx = idx % 8;
+        const uint8_t byte = key_bytes[byte_idx];
+        const int bit = (byte >> (7 - bit_idx)) & 1;
+        register_bits.push_back(bit);
+    }
+
+    std::vector<int> xor_bits(register_bits.begin(), register_bits.begin() + a);
+    std::vector<int> maj_bits(register_bits.begin() + a, register_bits.begin() + a + b);
+    return xorMaj(xor_bits, maj_bits);
+}
+} // namespace
+
 std::string bytesToBitstring(const std::vector<uint8_t> &byte_data) {
     std::string bitstring;
     for (auto byte : byte_data) {
@@ -19,6 +60,67 @@ std::string bytesToBitstring(const std::vector<uint8_t> &byte_data) {
         bitstring += bits.to_string();
     }
     return bitstring;
+}
+
+std::vector<uint8_t> bitstringToBytes(const std::string &bitstring) {
+    if (bitstring.empty() || (bitstring.size() % 8 != 0)) {
+        throw std::invalid_argument("bitstring length must be a non-zero multiple of 8");
+    }
+
+    std::vector<uint8_t> bytes(bitstring.size() / 8, 0);
+    for (size_t i = 0; i < bitstring.size(); ++i) {
+        const char c = bitstring[i];
+        if (c != '0' && c != '1') {
+            throw std::invalid_argument("bitstring must contain only '0' or '1'");
+        }
+        if (c == '1') {
+            bytes[i / 8] |= static_cast<uint8_t>(1u << (7 - (i % 8)));
+        }
+    }
+    return bytes;
+}
+
+std::vector<std::vector<int>> generateDeterministicSubsets(int num_samples, int N, int n, uint32_t seed) {
+    if (num_samples <= 0 || n <= 0 || N <= 0 || n > N) {
+        throw std::invalid_argument("invalid subset generation parameters");
+    }
+
+    std::vector<std::vector<int>> subsets;
+    subsets.reserve(static_cast<size_t>(num_samples));
+
+    std::vector<int> all_indices(N);
+    std::iota(all_indices.begin(), all_indices.end(), 0);
+    std::mt19937 local_rng(seed);
+
+    for (int i = 0; i < num_samples; ++i) {
+        std::vector<int> permuted = all_indices;
+        std::shuffle(permuted.begin(), permuted.end(), local_rng);
+        permuted.resize(n);
+        subsets.push_back(std::move(permuted));
+    }
+
+    return subsets;
+}
+
+std::vector<uint8_t> generateOutputsFromKey(const std::vector<uint8_t> &key_bytes, const std::vector<std::vector<int>> &subsets, int a, int b) {
+    std::vector<uint8_t> outputs;
+    outputs.reserve(subsets.size());
+
+    for (const auto &subset : subsets) {
+        outputs.push_back(static_cast<uint8_t>(evaluateOutputFromKey(key_bytes, subset, a, b)));
+    }
+
+    return outputs;
+}
+
+bool verifyCandidateByPRGOutputs(const std::string &candidate_key_bits, const std::vector<std::vector<int>> &subsets, const std::vector<uint8_t> &expected_outputs, int a, int b) {
+    if (subsets.size() != expected_outputs.size()) {
+        throw std::invalid_argument("subsets and expected_outputs size mismatch");
+    }
+
+    const std::vector<uint8_t> candidate_key_bytes = bitstringToBytes(candidate_key_bits);
+    const std::vector<uint8_t> candidate_outputs = generateOutputsFromKey(candidate_key_bytes, subsets, a, b);
+    return candidate_outputs == expected_outputs;
 }
 
 int xorMaj(const std::vector<int> &xor_bits, const std::vector<int> &maj_bits) {
@@ -105,12 +207,10 @@ std::pair<std::vector<std::bitset<MAX_SIZE>>, std::vector<int>> generateMatrixFr
     
     std::vector<std::pair<int, std::vector<int>>> selectedInstances = successfulInstances;
     size_t maxRows = 245;
-
-    std::random_device rd;
-    std::mt19937 generator(rd());
+    static std::mt19937 matrix_sampler(static_cast<unsigned int>(std::time(nullptr)));
 
     if (successfulInstances.size() > maxRows) {
-        std::shuffle(selectedInstances.begin(), selectedInstances.end(), generator);
+        std::shuffle(selectedInstances.begin(), selectedInstances.end(), matrix_sampler);
         selectedInstances.resize(maxRows);
     }
 
@@ -157,7 +257,7 @@ std::vector<std::vector<int>> verifySolutions(const std::vector<std::bitset<MAX_
         std::bitset<MAX_SIZE> solution_bitset;
 
         for (int j = 0; j < MAX_SIZE; ++j) {
-            solution_bitset[j] = solution[j];
+            solution_bitset[j] = (j < static_cast<int>(solution.size())) ? solution[j] : 0;
         }
 
         for (int i = 0; i < A.size(); ++i) {
@@ -242,9 +342,10 @@ std::vector<std::vector<int>> gaussianEliminationMod2WithFreeVariables(std::vect
     int num_free_vars = free_variables.size();
     std::vector<std::vector<int>> dp(1 << num_free_vars, std::vector<int>(cols, 0));
     dp[0] = x;
+    all_solutions.push_back(dp[0]);
 
     for (int combination = 1; combination < (1 << num_free_vars); ++combination) {
-        int idx = __builtin_ctz(combination);
+        int idx = trailingZeroCount(static_cast<unsigned int>(combination));
         dp[combination] = dp[combination ^ (1 << idx)];
 
         int var = free_variables[idx];
@@ -279,7 +380,7 @@ std::vector<int> selectRandomIndices(int t) {
 int hammingWeight(const uint8_t *a, const uint8_t *b, size_t size) {
     int weight = 0;
     for (size_t i = 0; i < size; ++i) {
-        weight += __builtin_popcount(a[i] ^ b[i]);
+        weight += popcountByte(static_cast<uint8_t>(a[i] ^ b[i]));
     }
     return weight;
 }
@@ -307,20 +408,20 @@ void processSingleFileWithMemoryMapping(const std::string &inputFilePath, const 
 
     HANDLE hFile = CreateFileW(wideInputFilePath.c_str(), GENERIC_READ, FILE_SHARE_READ, NULL, OPEN_EXISTING, FILE_ATTRIBUTE_NORMAL, NULL);
     if (hFile == INVALID_HANDLE_VALUE) {
-        std::cerr << "无法打开输入文件！" << std::endl;
+        std::cerr << "cannot open input file" << std::endl;
         return;
     }
 
     HANDLE hMapFile = CreateFileMapping(hFile, NULL, PAGE_READONLY, 0, 0, NULL);
     if (hMapFile == NULL) {
-        std::cerr << "文件映射失败！" << std::endl;
+        std::cerr << "file mapping failed" << std::endl;
         CloseHandle(hFile);
         return;
     }
 
     uint8_t *fileData = (uint8_t *)MapViewOfFile(hMapFile, FILE_MAP_READ, 0, 0, 0);
     if (fileData == NULL) {
-        std::cerr << "文件映射视图失败！" << std::endl;
+        std::cerr << "map view failed" << std::endl;
         CloseHandle(hMapFile);
         CloseHandle(hFile);
         return;
@@ -356,7 +457,7 @@ void processSingleFileWithMemoryMapping(const std::string &inputFilePath, const 
 void processFilesWithMemoryMapping(const std::string &folderPath, const std::vector<int> &t_indices, const std::string &outputFilePath, int num_files) {
     std::ofstream outFile(outputFilePath);
     if (!outFile.is_open()) {
-        std::cerr << "无法打开输出文件！" << std::endl;
+        std::cerr << "cannot open output file" << std::endl;
         return;
     }
 
@@ -368,9 +469,10 @@ void processFilesWithMemoryMapping(const std::string &folderPath, const std::vec
 
     for (int i = 1; i <= num_files; ++i) {
         std::string inputFilePath = folderPath + "/output_" + std::to_string(i) + ".bin";
-        std::cout << "正在处理文件: " << inputFilePath << std::endl;
+        std::cout << "processing file: " << inputFilePath << std::endl;
         processSingleFileWithMemoryMapping(inputFilePath, t_indices, outFile);
     }
 
     outFile.close();
 }
+

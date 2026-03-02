@@ -1,0 +1,7 @@
+build/
+data/
+*.exe
+*.obj
+*.o
+*.out
+filtered_output.txt
