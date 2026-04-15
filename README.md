@@ -18,6 +18,11 @@ Optional:
 - OpenMP-capable toolchain (for faster `attack_program`)
 - PowerShell (for harness scripts under `scripts/`)
 
+`attack_program` is now portable across Windows, Linux, and macOS:
+
+- Windows uses memory-mapped file I/O in `verify.cpp`
+- Linux/macOS use a standard binary-stream fallback for the same filtering logic
+
 ## Platform Used For Reported Runs
 
 The included scripts and commands were validated on:
@@ -85,7 +90,17 @@ Step A: generate PRG outputs:
 ./output_generator
 ```
 
-This creates `data/output_*.bin` files. Default configuration is very large and can take hours plus substantial disk space.
+This creates `data/output_*.bin` files.
+
+Default storage usage of `output_generator`:
+
+- each sample stores `1 + 32 + 32 = 65` bytes
+- default `num_instances = 10,000,000,000`
+- default `instances_per_file = 20,000,000`
+- each output file is about `1.30 GB` (`20,000,000 x 65` bytes, about `1.21 GiB`)
+- total output size is about `650 GB` (about `605 GiB`) across `500` files
+
+In practice, you should reserve at least `650 GB` of free disk space before running the default full dataset generation.
 
 Step B: launch attack:
 

@@ -12,7 +12,9 @@
 #if defined(_MSC_VER)
 #include <intrin.h>
 #endif
+#ifdef _WIN32
 #include <windows.h>
+#endif
 
 std::mt19937 generator(static_cast<unsigned int>(std::time(0)));
 
@@ -403,7 +405,44 @@ void writeResultToFile(std::ofstream &outFile, uint8_t result_bit, const uint8_t
     outFile << "\n";
 }
 
+#ifndef _WIN32
+void processSingleFileWithStream(const std::string &inputFilePath, const std::vector<int> &t_indices, std::ofstream &outFile) {
+    std::ifstream inFile(inputFilePath, std::ios::binary);
+    if (!inFile.is_open()) {
+        std::cerr << "cannot open input file" << std::endl;
+        return;
+    }
+
+    uint8_t t_indices_vector[32] = {0};
+    for (int idx : t_indices) {
+        t_indices_vector[idx / 8] |= (1 << (idx % 8));
+    }
+
+    while (true) {
+        uint8_t result_bit = 0;
+        uint8_t xor_vector[32] = {0};
+        uint8_t maj_vector[32] = {0};
+
+        if (!inFile.read(reinterpret_cast<char *>(&result_bit), sizeof(result_bit))) {
+            break;
+        }
+        if (!inFile.read(reinterpret_cast<char *>(xor_vector), sizeof(xor_vector))) {
+            break;
+        }
+        if (!inFile.read(reinterpret_cast<char *>(maj_vector), sizeof(maj_vector))) {
+            break;
+        }
+
+        int weight = hammingWeight(maj_vector, t_indices_vector);
+        if (weight == 52) {
+            writeResultToFile(outFile, result_bit, xor_vector, maj_vector);
+        }
+    }
+}
+#endif
+
 void processSingleFileWithMemoryMapping(const std::string &inputFilePath, const std::vector<int> &t_indices, std::ofstream &outFile) {
+#ifdef _WIN32
     std::wstring wideInputFilePath = std::wstring(inputFilePath.begin(), inputFilePath.end());
 
     HANDLE hFile = CreateFileW(wideInputFilePath.c_str(), GENERIC_READ, FILE_SHARE_READ, NULL, OPEN_EXISTING, FILE_ATTRIBUTE_NORMAL, NULL);
@@ -452,6 +491,9 @@ void processSingleFileWithMemoryMapping(const std::string &inputFilePath, const 
     UnmapViewOfFile(fileData);
     CloseHandle(hMapFile);
     CloseHandle(hFile);
+#else
+    processSingleFileWithStream(inputFilePath, t_indices, outFile);
+#endif
 }
 
 void processFilesWithMemoryMapping(const std::string &folderPath, const std::vector<int> &t_indices, const std::string &outputFilePath, int num_files) {
