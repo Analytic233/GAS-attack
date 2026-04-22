@@ -21,7 +21,7 @@ Optional:
 `attack_program` is now portable across Windows, Linux, and macOS:
 
 - Windows uses memory-mapped file I/O in `verify.cpp`
-- Linux/macOS use a standard binary-stream fallback for the same filtering logic
+- Linux/macOS use POSIX `mmap` in `verify.cpp`
 
 ## Platform Used For Reported Runs
 
@@ -97,8 +97,9 @@ Default storage usage of `output_generator`:
 - each sample stores `1 + 32 + 32 = 65` bytes
 - default `num_instances = 10,000,000,000`
 - default `instances_per_file = 20,000,000`
-- each output file is about `1.30 GB` (`20,000,000 x 65` bytes, about `1.21 GiB`)
-- total output size is about `650 GB` (about `605 GiB`) across `500` files
+- number of output files is `500` (`10,000,000,000 / 20,000,000`)
+- each output file is `1,300,000,000` bytes, about `1.30 GB` or `1.21 GiB`
+- total output size is `650,000,000,000` bytes, about `650 GB` or `605.36 GiB`
 
 In practice, you should reserve at least `650 GB` of free disk space before running the default full dataset generation.
 
@@ -152,6 +153,17 @@ You can re-run summary only:
 ```powershell
 .\scripts\summarize_harness_logs.ps1 -LogsDir artifact-logs
 ```
+
+## Validation Status
+
+The current codebase was re-checked after the Linux `mmap` update in `verify.cpp`.
+
+Verified locally:
+
+- all four binaries compile successfully with `g++ -std=c++17 -O3`
+- `FiLIP_verifier` runs to completion and prints the expected probability table
+- `toy_attack` runs in quick-check mode; because it is randomized, repeated runs may either succeed or fail
+- `output_generator` and `attack_program` were validated at compile time, but the full end-to-end run was not repeated here because the default dataset generation writes about `650 GB`
 
 ## Source Code Organization
 

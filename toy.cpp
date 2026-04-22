@@ -25,7 +25,7 @@ class PRNG {
     int n_size;
 
 public:
-    PRNG(const vector<uint8_t>& k, int n) : key(k), n_size(n), gen(43) {}
+    PRNG(const vector<uint8_t>& k, int n) : key(k), n_size(n), gen(42) {}
 
     pair<int, vector<int>> generate_instance() {
         vector<int> indices(key.size());

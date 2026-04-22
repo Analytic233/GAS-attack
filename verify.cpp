@@ -14,6 +14,11 @@
 #endif
 #ifdef _WIN32
 #include <windows.h>
+#elif defined(__linux__) || defined(__APPLE__)
+#include <fcntl.h>
+#include <sys/mman.h>
+#include <sys/stat.h>
+#include <unistd.h>
 #endif
 
 std::mt19937 generator(static_cast<unsigned int>(std::time(0)));
@@ -491,6 +496,60 @@ void processSingleFileWithMemoryMapping(const std::string &inputFilePath, const 
     UnmapViewOfFile(fileData);
     CloseHandle(hMapFile);
     CloseHandle(hFile);
+#elif defined(__linux__) || defined(__APPLE__)
+    constexpr size_t record_size = 1 + 32 + 32;
+
+    const int fd = open(inputFilePath.c_str(), O_RDONLY);
+    if (fd == -1) {
+        std::cerr << "cannot open input file" << std::endl;
+        return;
+    }
+
+    struct stat file_info;
+    if (fstat(fd, &file_info) == -1) {
+        std::cerr << "stat failed" << std::endl;
+        close(fd);
+        return;
+    }
+
+    if (file_info.st_size <= 0) {
+        close(fd);
+        return;
+    }
+
+    const size_t fileSize = static_cast<size_t>(file_info.st_size);
+    const size_t mappedSize = (fileSize / record_size) * record_size;
+    if (mappedSize == 0) {
+        close(fd);
+        return;
+    }
+
+    void *mapped = mmap(nullptr, mappedSize, PROT_READ, MAP_PRIVATE, fd, 0);
+    if (mapped == MAP_FAILED) {
+        std::cerr << "map view failed" << std::endl;
+        close(fd);
+        return;
+    }
+
+    const uint8_t *fileData = static_cast<const uint8_t *>(mapped);
+    uint8_t t_indices_vector[32] = {0};
+    for (int idx : t_indices) {
+        t_indices_vector[idx / 8] |= (1 << (idx % 8));
+    }
+
+    for (size_t offset = 0; offset < mappedSize; offset += record_size) {
+        const uint8_t result_bit = fileData[offset];
+        const uint8_t *xor_vector = fileData + offset + 1;
+        const uint8_t *maj_vector = fileData + offset + 33;
+
+        const int weight = hammingWeight(maj_vector, t_indices_vector);
+        if (weight == 52) {
+            writeResultToFile(outFile, result_bit, xor_vector, maj_vector);
+        }
+    }
+
+    munmap(mapped, mappedSize);
+    close(fd);
 #else
     processSingleFileWithStream(inputFilePath, t_indices, outFile);
 #endif

@@ -1,4 +1,4 @@
-﻿#include <bitset>
+#include <bitset>
 #include <cstdint>
 #include <ctime>
 #include <fstream>
