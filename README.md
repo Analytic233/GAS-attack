@@ -94,12 +94,7 @@ This creates `data/output_*.bin` files.
 
 Default storage usage of `output_generator`:
 
-- each sample stores `1 + 32 + 32 = 65` bytes
-- default `num_instances = 10,000,000,000`
-- default `instances_per_file = 20,000,000`
-- number of output files is `500` (`10,000,000,000 / 20,000,000`)
-- each output file is `1,300,000,000` bytes, about `1.30 GB` or `1.21 GiB`
-- total output size is `650,000,000,000` bytes, about `650 GB` or `605.36 GiB`
+
 
 In practice, you should reserve at least `650 GB` of free disk space before running the default full dataset generation.
 
