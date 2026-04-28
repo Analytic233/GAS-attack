@@ -77,6 +77,9 @@ How to interpret this output:
 
 - `Good Group` and `Bad Group` are the main statistical quantities of interest.
 - A successful sanity check is that the `Good Group` probability is clearly stronger than the `Bad Group` probability.
+- For a faithful reproduction, these reported probabilities should also be reasonably close to the corresponding probability values reported in the paper's table for this parameter setting.
+- `SAMPLE_SIZE` in `FiLIP_verify.cpp` controls the Monte Carlo accuracy of this estimate.
+- Using a larger `SAMPLE_SIZE` (eg. 100000000) usually makes the observed probabilities more stable and closer to the paper-level values, at the cost of a longer runtime.
 - This executable is the artifact-side statistical check corresponding to the FiLIP-style grouping behavior discussed in the paper.
 
 ### 2) Toy attack
