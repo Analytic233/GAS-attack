@@ -2,7 +2,7 @@
 
 This is the artifact belonging to the paper:
 
-> Ximing Fu, Mo Li, Shihan Lyu, and Chuanyi Liu, Attacks on Goldreich's Pseudorandom Generators by Grouping and Solving, Eurocrypt 2025.
+> Ximing Fu, Mo Li, Shihan Lyu, and Chuanyi Liu, Attacks on Goldreich's Pseudorandom Generators by Grouping and Solving, Eurocrypt 2026.
 
 The repository contains:
 
