@@ -39,7 +39,7 @@ The implementation can also be built and run in standard Unix-like environments,
 The artifact supports two complementary workflows:
 
 1. Running the C++ programs for statistical verification, the toy attack, and the full grouped-equation attack pipeline.
-2. Running lightweight Python scripts that compute Table 5 and Table 6 values directly from the paper's formulas, without generating the full experimental dataset.
+2. Running Python scripts that compute Table 5 and Table 6 values directly from the paper's formulas.
 
 # Build
 
@@ -201,12 +201,8 @@ Output columns:
 - `Tbit`
 - `Tenc`
 
-These values are computed directly from the formulas used in the paper's analysis rather than from a long experimental run.
+These values are computed directly from the formulas used in the paper's analysis .
 
-Printed precision follows the paper's table style:
-
-- `p` is printed with 4 decimal places
-- `Teg`, `Ts`, `Tbit`, and `Tenc` are printed with 1 decimal place
 
 ## Table 6
 
@@ -227,12 +223,6 @@ Output columns:
 - `Tbit`
 - `Tenc`
 
-Notes:
-
-- the script uses high-precision internal computation but prints the table in a paper-style format
-- `p` is printed with 4 decimal places
-- `D`, `Teg`, `Ts`, `Tbit`, and `Tenc` are printed with 1 decimal place
-- the integer columns `e` and `ep` use floor-style output to match the paper's table style more closely
 
 # Harness Scripts
 
